@@ -1,0 +1,125 @@
+<!-- salva come order_status.html -->
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Gestione Stato Ordini — BabbyLeo</title>
+<style>
+  body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:18px;background:#fafafa;color:#111}
+  .container{max-width:760px;margin:0 auto;background:#fff;padding:18px;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,0.06)}
+  h1{margin-top:0}
+  label{display:block;margin-top:12px}
+  input,select,textarea{width:100%;padding:8px;margin-top:6px;border:1px solid #ddd;border-radius:6px}
+  button{margin-top:12px;padding:10px 14px;border:0;background:#0b79f7;color:#fff;border-radius:6px;cursor:pointer}
+  .row{display:flex;gap:8px}
+  .small{width:140px}
+  table{width:100%;border-collapse:collapse;margin-top:14px}
+  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+  .muted{color:#666;font-size:0.9rem}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Gestione Stato Ordini</h1>
+  <div id="loginBox">
+    <p class="muted">Accedi per aggiornare lo stato. (Password predefinita: <strong>babby</strong>)</p>
+    <label>Password:
+      <input id="pw" type="password" placeholder="Inserisci password"/>
+    </label>
+    <button id="btnLogin">Accedi</button>
+  </div>
+
+  <div id="app" style="display:none">
+    <label>ID Ordine:
+      <input id="orderId" placeholder="es. SC0013778"/>
+    </label>
+
+    <label>Nuovo Stato:
+      <select id="status">
+        <option>Ordine ricevuto</option>
+        <option>In preparazione</option>
+        <option>Pronto per la spedizione</option>
+        <option>Spedito</option>
+        <option>Consegnato</option>
+        <option>Reso richiesto</option>
+        <option>Annullato</option>
+      </select>
+    </label>
+
+    <label>Note (opzionali):
+      <textarea id="notes" rows="3" placeholder="Es. 'Confezione regalo inclusa'"></textarea>
+    </label>
+
+    <div class="row">
+      <input id="operator" class="small" placeholder="Nome operatore"/>
+      <button id="btnSave">Aggiorna stato</button>
+      <button id="btnExport">Esporta CSV</button>
+      <button id="btnClear" style="background:#e33">Elimina tutto</button>
+    </div>
+
+    <h3>Storico aggiornamenti</h3>
+    <table id="logTable">
+      <thead><tr><th>Data</th><th>ID</th><th>Stato</th><th>Operatore</th><th>Note</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="muted">Questa pagina salva i dati nel browser (localStorage). Per condividerla pubblica il file su GitHub Pages o un server.</p>
+</div>
+
+<script>
+const PASSWORD = 'babby'; // cambia qui la password
+const loginBox = document.getElementById('loginBox');
+const app = document.getElementById('app');
+const btnLogin = document.getElementById('btnLogin');
+const pw = document.getElementById('pw');
+const btnSave = document.getElementById('btnSave');
+const btnExport = document.getElementById('btnExport');
+const btnClear = document.getElementById('btnClear');
+const logTableBody = document.querySelector('#logTable tbody');
+
+function loadLogs(){
+  const raw = localStorage.getItem('orderLogs') || '[]';
+  return JSON.parse(raw);
+}
+function saveLogs(arr){ localStorage.setItem('orderLogs', JSON.stringify(arr)); renderLogs(); }
+function renderLogs(){
+  const arr = loadLogs();
+  logTableBody.innerHTML = '';
+  arr.slice().reverse().forEach(row=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${row.date}</td><td>${row.id}</td><td>${row.status}</td><td>${row.operator||''}</td><td>${row.notes||''}</td>`;
+    logTableBody.appendChild(tr);
+  });
+}
+btnLogin.addEventListener('click', ()=>{
+  if(pw.value === PASSWORD){ loginBox.style.display='none'; app.style.display='block'; renderLogs(); }
+  else alert('Password errata');
+});
+btnSave.addEventListener('click', ()=>{
+  const id = document.getElementById('orderId').value.trim();
+  if(!id){ alert('Inserisci ID ordine'); return; }
+  const status = document.getElementById('status').value;
+  const notes = document.getElementById('notes').value.trim();
+  const operator = document.getElementById('operator').value.trim();
+  const logs = loadLogs();
+  logs.push({date:new Date().toLocaleString(), id, status, notes, operator});
+  saveLogs(logs);
+  document.getElementById('notes').value='';
+});
+btnExport.addEventListener('click', ()=>{
+  const arr = loadLogs();
+  if(!arr.length){ alert('Nessun dato'); return; }
+  const csv = ["data,id,stato,operatore,note", ...arr.map(r=>[r.date,r.id,r.status,r.operator,r.notes].map(x=>`"${(x||'').replace(/"/g,'""')}"`).join(','))].join('\\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='order_status.csv'; a.click(); URL.revokeObjectURL(url);
+});
+btnClear.addEventListener('click', ()=>{
+  if(confirm('Eliminare tutti i dati dal browser?')){ localStorage.removeItem('orderLogs'); renderLogs(); }
+});
+renderLogs();
+</script>
+</body>
+</html>
