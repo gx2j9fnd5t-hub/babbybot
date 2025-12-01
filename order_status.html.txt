@@ -1,0 +1,19 @@
+// Google Apps Script: salva come nuovo progetto in Extensions -> Apps Script
+function doGet(e){
+  return HtmlService.createHtmlOutputFromFile('Index').setTitle('Order Status');
+}
+
+function appendLog(data){
+  const ss = SpreadsheetApp.openById('SPREADSHEET_ID'); // sostituisci con ID del foglio
+  const sheet = ss.getSheetByName('Logs') || ss.insertSheet('Logs');
+  sheet.appendRow([new Date(), data.id, data.status, data.operator||'', data.notes||'']);
+  return {ok:true};
+}
+
+function getLogs(){
+  const ss = SpreadsheetApp.openById('SPREADSHEET_ID');
+  const sheet = ss.getSheetByName('Logs');
+  if(!sheet) return [];
+  const rows = sheet.getDataRange().getValues();
+  return rows.slice(0).map(r=>({date:r[0], id:r[1], status:r[2], operator:r[3], notes:r[4]}));
+}
